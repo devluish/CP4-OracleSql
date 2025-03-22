@@ -276,16 +276,28 @@ CREATE OR REPLACE PROCEDURE INSERE_DIM_STATUS (
     p_cod_status        IN DIM_STATUS.COD_STATUS%TYPE,
     p_descricao_status  IN DIM_STATUS.DESCRICAO_STATUS%TYPE
 ) IS
+    v_count NUMBER;
 BEGIN
+    -- Validação de campo obrigatório
     IF p_descricao_status IS NULL THEN
         RAISE_APPLICATION_ERROR(-20007, 'Descrição do status é obrigatória.');
     END IF;
 
-    IF EXISTS (SELECT 1 FROM DIM_STATUS WHERE COD_STATUS = p_cod_status) THEN
+    -- Verifica duplicidade
+    SELECT COUNT(*) INTO v_count
+    FROM DIM_STATUS
+    WHERE COD_STATUS = p_cod_status;
+
+    IF v_count > 0 THEN
         RAISE_APPLICATION_ERROR(-20008, 'Status já cadastrado.');
     END IF;
 
-    INSERT INTO DIM_STATUS VALUES (p_cod_status, p_descricao_status);
+    -- Inserção
+    INSERT INTO DIM_STATUS (
+        COD_STATUS, DESCRICAO_STATUS
+    ) VALUES (
+        p_cod_status, p_descricao_status
+    );
 
 EXCEPTION
     WHEN OTHERS THEN
@@ -294,6 +306,28 @@ EXCEPTION
 END;
 /
 
+--POPULANDO STATUS
+BEGIN
+    INSERE_DIM_STATUS(1, 'Processando');
+    INSERE_DIM_STATUS(2, 'Concluído');
+    INSERE_DIM_STATUS(3, 'Pendente');
+    INSERE_DIM_STATUS(4, 'Cancelado');
+    INSERE_DIM_STATUS(5, 'Em análise');
+    INSERE_DIM_STATUS(6, 'Reembolsado');
+    INSERE_DIM_STATUS(7, 'Aguardando pagamento');
+    INSERE_DIM_STATUS(8, 'Entregue');
+    INSERE_DIM_STATUS(9, 'Em transporte');
+    INSERE_DIM_STATUS(10, 'Falha na entrega');
+END;
+/
+
+--VERIFICANDO
+SELECT * FROM DIM_STATUS;
+
+
+
+
+
 
 --DIM PAGAMENTO
 CREATE OR REPLACE PROCEDURE INSERE_DIM_PAGAMENTO (
@@ -301,7 +335,9 @@ CREATE OR REPLACE PROCEDURE INSERE_DIM_PAGAMENTO (
     p_forma_pagamento   IN DIM_PAGAMENTO.FORMA_PAGAMENTO%TYPE,
     p_parcelado         IN DIM_PAGAMENTO.PARCELADO%TYPE
 ) IS
+    v_count NUMBER;
 BEGIN
+    -- Validação de campos obrigatórios
     IF p_forma_pagamento IS NULL THEN
         RAISE_APPLICATION_ERROR(-20009, 'Forma de pagamento é obrigatória.');
     END IF;
@@ -310,11 +346,21 @@ BEGIN
         RAISE_APPLICATION_ERROR(-20010, 'Valor de "parcelado" deve ser Sim ou Não.');
     END IF;
 
-    IF EXISTS (SELECT 1 FROM DIM_PAGAMENTO WHERE COD_PAGAMENTO = p_cod_pagamento) THEN
+    -- Verifica duplicidade
+    SELECT COUNT(*) INTO v_count
+    FROM DIM_PAGAMENTO
+    WHERE COD_PAGAMENTO = p_cod_pagamento;
+
+    IF v_count > 0 THEN
         RAISE_APPLICATION_ERROR(-20011, 'Forma de pagamento já cadastrada.');
     END IF;
 
-    INSERT INTO DIM_PAGAMENTO VALUES (p_cod_pagamento, p_forma_pagamento, p_parcelado);
+    -- Inserção
+    INSERT INTO DIM_PAGAMENTO (
+        COD_PAGAMENTO, FORMA_PAGAMENTO, PARCELADO
+    ) VALUES (
+        p_cod_pagamento, p_forma_pagamento, p_parcelado
+    );
 
 EXCEPTION
     WHEN OTHERS THEN
@@ -322,6 +368,30 @@ EXCEPTION
         RAISE;
 END;
 /
+
+
+--PRECISEI ALTERAR O TAMANHO DA COLUNA
+ALTER TABLE DIM_PAGAMENTO MODIFY PARCELADO VARCHAR2(5 BYTE);
+
+
+--POPULANDO DIM PAGAMENTO
+BEGIN
+    INSERE_DIM_PAGAMENTO(1, 'Cartão de Crédito', 'Sim');
+    INSERE_DIM_PAGAMENTO(2, 'Cartão de Débito', 'Não');
+    INSERE_DIM_PAGAMENTO(3, 'PIX', 'Não');
+    INSERE_DIM_PAGAMENTO(4, 'Boleto Bancário', 'Não');
+    INSERE_DIM_PAGAMENTO(5, 'Transferência Bancária', 'Não');
+    INSERE_DIM_PAGAMENTO(6, 'Dinheiro', 'Não');
+    INSERE_DIM_PAGAMENTO(7, 'Cheque', 'Não');
+    INSERE_DIM_PAGAMENTO(8, 'Carteira Digital', 'Sim');
+    INSERE_DIM_PAGAMENTO(9, 'Parcelamento Loja', 'Sim');
+    INSERE_DIM_PAGAMENTO(10, 'Pagamento na Entrega', 'Não');
+END;
+/
+
+--VERIFICANDO INSERÇÃO
+SELECT * FROM DIM_PAGAMENTO;
+
 
 
 --FATO VENDAS
@@ -336,18 +406,27 @@ CREATE OR REPLACE PROCEDURE INSERE_FATO_VENDAS (
     p_val_total_pedido     IN FATO_VENDAS.VAL_TOTAL_PEDIDO%TYPE,
     p_val_desconto         IN FATO_VENDAS.VAL_DESCONTO%TYPE
 ) IS
+    v_count NUMBER;
 BEGIN
-    -- Validações básicas
+    -- Validação de quantidade
     IF p_qtd_produto_vendido <= 0 THEN
         RAISE_APPLICATION_ERROR(-20012, 'Quantidade vendida deve ser maior que zero.');
     END IF;
 
-    IF EXISTS (SELECT 1 FROM FATO_VENDAS WHERE ID_VENDA = p_id_venda) THEN
+    -- Verifica se já existe uma venda com o mesmo ID
+    SELECT COUNT(*) INTO v_count
+    FROM FATO_VENDAS
+    WHERE ID_VENDA = p_id_venda;
+
+    IF v_count > 0 THEN
         RAISE_APPLICATION_ERROR(-20013, 'Venda já cadastrada.');
     END IF;
 
     -- Inserção
-    INSERT INTO FATO_VENDAS VALUES (
+    INSERT INTO FATO_VENDAS (
+        ID_VENDA, COD_CLIENTE, COD_VENDEDOR, COD_STATUS, COD_PAGAMENTO,
+        COD_PRODUTO, QTD_PRODUTO_VENDIDO, VAL_TOTAL_PEDIDO, VAL_DESCONTO
+    ) VALUES (
         p_id_venda, p_cod_cliente, p_cod_vendedor, p_cod_status, p_cod_pagamento,
         p_cod_produto, p_qtd_produto_vendido, p_val_total_pedido, p_val_desconto
     );
@@ -359,6 +438,23 @@ EXCEPTION
 END;
 /
 
+
+--TESTE DE INSERÇÃO
+BEGIN
+    INSERE_FATO_VENDAS(
+        p_id_venda => 1001,
+        p_cod_cliente => 1,
+        p_cod_vendedor => 10,
+        p_cod_status => 2,
+        p_cod_pagamento => 1,
+        p_cod_produto => 1001,
+        p_qtd_produto_vendido => 2,
+        p_val_total_pedido => 25.00,
+        p_val_desconto => 5.00
+    );
+END;
+/
+SELECT * FROM FATO_VENDAS ORDER BY ID_VENDA;
 
 
 
