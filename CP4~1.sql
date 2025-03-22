@@ -21,7 +21,7 @@ DESC tabela_de_pedidos;
 SET SERVEROUTPUT ON;
 
 
--- EX1: Desenvolvimento do Modelo Estrela
+-- EX 1: Desenvolvimento do Modelo Estrela
   
 --CRIANDO TABELAS DE DIMENSÃO
 
@@ -91,7 +91,274 @@ SELECT * FROM DIM_STATUS;
 SELECT * FROM DIM_PAGAMENTO;
 SELECT * FROM FATO_VENDAS;
 
+
+
+
+
+
+
+
+-- EX 2: Criação de Procedures para Dimensões
+
+--POPULANDO TABELAS--
+
+--DIM CLIENTE
+CREATE OR REPLACE PROCEDURE INSERE_DIM_CLIENTE (
+    p_cod_cliente     IN DIM_CLIENTE.COD_CLIENTE%TYPE,
+    p_nome_cliente    IN DIM_CLIENTE.NOME_CLIENTE%TYPE,
+    p_perfil_consumo  IN DIM_CLIENTE.PERFIL_CONSUMO%TYPE
+) IS
+    v_count NUMBER;
+BEGIN
+    -- Validação: nome não pode ser nulo
+    IF p_nome_cliente IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Nome do cliente não pode ser nulo.');
+    END IF;
+
+    -- Verifica duplicidade
+    SELECT COUNT(*) INTO v_count
+    FROM DIM_CLIENTE
+    WHERE COD_CLIENTE = p_cod_cliente;
+
+    IF v_count > 0 THEN
+        RAISE_APPLICATION_ERROR(-20002, 'Cliente já cadastrado.');
+    END IF;
+
+    -- Inserção
+    INSERT INTO DIM_CLIENTE (
+        COD_CLIENTE, NOME_CLIENTE, PERFIL_CONSUMO
+    ) VALUES (
+        p_cod_cliente, p_nome_cliente, p_perfil_consumo
+    );
+
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Erro ao inserir cliente: ' || SQLERRM);
+        RAISE;
+END;
+/
+--POPULANDO CLIENTE
+BEGIN
+    INSERE_DIM_CLIENTE(1, 'Maria Souza', 'Frequente');
+    INSERE_DIM_CLIENTE(2, 'João Lima', 'Ocasional');
+    INSERE_DIM_CLIENTE(3, 'Ana Costa', 'VIP');
+    INSERE_DIM_CLIENTE(4, 'Carlos Oliveira', 'Frequente');
+    INSERE_DIM_CLIENTE(5, 'Fernanda Dias', 'Ocasional');
+    INSERE_DIM_CLIENTE(6, 'Bruno Silva', 'VIP');
+    INSERE_DIM_CLIENTE(7, 'Juliana Martins', 'Frequente');
+    INSERE_DIM_CLIENTE(8, 'Lucas Pereira', 'Ocasional');
+    INSERE_DIM_CLIENTE(9, 'Patrícia Mendes', 'Frequente');
+    INSERE_DIM_CLIENTE(10, 'Ricardo Almeida', 'VIP');
+END;
+/
+
+--VERIFICANDO INSERÇÃO
+SELECT * FROM DIM_CLIENTE;
+
+
+
+
+
+
+
+
+--DIM VENDEDOR
+CREATE OR REPLACE PROCEDURE INSERE_DIM_VENDEDOR (
+    p_cod_vendedor    IN DIM_VENDEDOR.COD_VENDEDOR%TYPE,
+    p_nome_vendedor   IN DIM_VENDEDOR.NOME_VENDEDOR%TYPE
+) IS
+    v_count NUMBER;
+BEGIN
+    -- Validação: nome obrigatório
+    IF p_nome_vendedor IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20003, 'Nome do vendedor não pode ser nulo.');
+    END IF;
+
+    -- Verifica duplicidade
+    SELECT COUNT(*) INTO v_count
+    FROM DIM_VENDEDOR
+    WHERE COD_VENDEDOR = p_cod_vendedor;
+
+    IF v_count > 0 THEN
+        RAISE_APPLICATION_ERROR(-20004, 'Vendedor já cadastrado.');
+    END IF;
+
+    -- Inserção
+    INSERT INTO DIM_VENDEDOR (
+        COD_VENDEDOR, NOME_VENDEDOR
+    ) VALUES (
+        p_cod_vendedor, p_nome_vendedor
+    );
+
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Erro ao inserir vendedor: ' || SQLERRM);
+        RAISE;
+END;
+/
+
+--POPULANDO VENDEDOR
+BEGIN
+    INSERE_DIM_VENDEDOR(10, 'Carlos Mendes');
+    INSERE_DIM_VENDEDOR(11, 'Fernanda Dias');
+    INSERE_DIM_VENDEDOR(12, 'Rafael Oliveira');
+    INSERE_DIM_VENDEDOR(13, 'Luciana Martins');
+    INSERE_DIM_VENDEDOR(14, 'Paulo Henrique');
+    INSERE_DIM_VENDEDOR(15, 'Tatiane Souza');
+    INSERE_DIM_VENDEDOR(16, 'Roberto Silva');
+    INSERE_DIM_VENDEDOR(17, 'Vanessa Lima');
+    INSERE_DIM_VENDEDOR(18, 'Marcos Andrade');
+    INSERE_DIM_VENDEDOR(19, 'Aline Barros');
+END;
+/
+
+--VERIFICANDO INSERÇÃO
+SELECT * FROM DIM_VENDEDOR;
+
+
+--DIM PRODUTP
+CREATE OR REPLACE PROCEDURE INSERE_DIM_PRODUTO (
+    p_cod_produto   IN DIM_PRODUTO.COD_PRODUTO%TYPE,
+    p_nome_produto  IN DIM_PRODUTO.NOME_PRODUTO%TYPE,
+    p_categoria     IN DIM_PRODUTO.CATEGORIA%TYPE
+) IS
+    v_count NUMBER;
+BEGIN
+    -- Validação de campos obrigatórios
+    IF p_nome_produto IS NULL OR p_categoria IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20005, 'Nome e categoria do produto são obrigatórios.');
+    END IF;
+
+    -- Verifica duplicidade
+    SELECT COUNT(*) INTO v_count
+    FROM DIM_PRODUTO
+    WHERE COD_PRODUTO = p_cod_produto;
+
+    IF v_count > 0 THEN
+        RAISE_APPLICATION_ERROR(-20006, 'Produto já cadastrado.');
+    END IF;
+
+    -- Inserção
+    INSERT INTO DIM_PRODUTO (
+        COD_PRODUTO, NOME_PRODUTO, CATEGORIA
+    ) VALUES (
+        p_cod_produto, p_nome_produto, p_categoria
+    );
+
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Erro ao inserir produto: ' || SQLERRM);
+        RAISE;
+END;
+/
+
 --POPULANDO
+BEGIN
+    INSERE_DIM_PRODUTO(1001, 'Escova Dental Ultra', 'Higiene Bucal');
+    INSERE_DIM_PRODUTO(1002, 'Creme Dental MaxFresh', 'Higiene Bucal');
+    INSERE_DIM_PRODUTO(1003, 'Enxaguante Bucal Menta', 'Higiene Bucal');
+    INSERE_DIM_PRODUTO(1004, 'Fio Dental SuperFino', 'Higiene Bucal');
+    INSERE_DIM_PRODUTO(1005, 'Kit Clareamento Caseiro', 'Estética');
+    INSERE_DIM_PRODUTO(1006, 'Protetor Bucal Esportivo', 'Proteção');
+    INSERE_DIM_PRODUTO(1007, 'Pastilha Refrescante', 'Acessórios');
+    INSERE_DIM_PRODUTO(1008, 'Creme Dental Infantil', 'Infantil');
+    INSERE_DIM_PRODUTO(1009, 'Escova Elétrica', 'Tecnologia');
+    INSERE_DIM_PRODUTO(1010, 'Kit Tratamento Gengiva', 'Tratamento');
+END;
+/
+--VERIFICANDO INSERÇÃO
+SELECT * FROM DIM_PRODUTO;
+
+
+
+--DIM STATUS
+CREATE OR REPLACE PROCEDURE INSERE_DIM_STATUS (
+    p_cod_status        IN DIM_STATUS.COD_STATUS%TYPE,
+    p_descricao_status  IN DIM_STATUS.DESCRICAO_STATUS%TYPE
+) IS
+BEGIN
+    IF p_descricao_status IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20007, 'Descrição do status é obrigatória.');
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM DIM_STATUS WHERE COD_STATUS = p_cod_status) THEN
+        RAISE_APPLICATION_ERROR(-20008, 'Status já cadastrado.');
+    END IF;
+
+    INSERT INTO DIM_STATUS VALUES (p_cod_status, p_descricao_status);
+
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Erro ao inserir status: ' || SQLERRM);
+        RAISE;
+END;
+/
+
+
+--DIM PAGAMENTO
+CREATE OR REPLACE PROCEDURE INSERE_DIM_PAGAMENTO (
+    p_cod_pagamento     IN DIM_PAGAMENTO.COD_PAGAMENTO%TYPE,
+    p_forma_pagamento   IN DIM_PAGAMENTO.FORMA_PAGAMENTO%TYPE,
+    p_parcelado         IN DIM_PAGAMENTO.PARCELADO%TYPE
+) IS
+BEGIN
+    IF p_forma_pagamento IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20009, 'Forma de pagamento é obrigatória.');
+    END IF;
+
+    IF p_parcelado NOT IN ('Sim', 'Não') THEN
+        RAISE_APPLICATION_ERROR(-20010, 'Valor de "parcelado" deve ser Sim ou Não.');
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM DIM_PAGAMENTO WHERE COD_PAGAMENTO = p_cod_pagamento) THEN
+        RAISE_APPLICATION_ERROR(-20011, 'Forma de pagamento já cadastrada.');
+    END IF;
+
+    INSERT INTO DIM_PAGAMENTO VALUES (p_cod_pagamento, p_forma_pagamento, p_parcelado);
+
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Erro ao inserir forma de pagamento: ' || SQLERRM);
+        RAISE;
+END;
+/
+
+
+--FATO VENDAS
+CREATE OR REPLACE PROCEDURE INSERE_FATO_VENDAS (
+    p_id_venda             IN FATO_VENDAS.ID_VENDA%TYPE,
+    p_cod_cliente          IN FATO_VENDAS.COD_CLIENTE%TYPE,
+    p_cod_vendedor         IN FATO_VENDAS.COD_VENDEDOR%TYPE,
+    p_cod_status           IN FATO_VENDAS.COD_STATUS%TYPE,
+    p_cod_pagamento        IN FATO_VENDAS.COD_PAGAMENTO%TYPE,
+    p_cod_produto          IN FATO_VENDAS.COD_PRODUTO%TYPE,
+    p_qtd_produto_vendido  IN FATO_VENDAS.QTD_PRODUTO_VENDIDO%TYPE,
+    p_val_total_pedido     IN FATO_VENDAS.VAL_TOTAL_PEDIDO%TYPE,
+    p_val_desconto         IN FATO_VENDAS.VAL_DESCONTO%TYPE
+) IS
+BEGIN
+    -- Validações básicas
+    IF p_qtd_produto_vendido <= 0 THEN
+        RAISE_APPLICATION_ERROR(-20012, 'Quantidade vendida deve ser maior que zero.');
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM FATO_VENDAS WHERE ID_VENDA = p_id_venda) THEN
+        RAISE_APPLICATION_ERROR(-20013, 'Venda já cadastrada.');
+    END IF;
+
+    -- Inserção
+    INSERT INTO FATO_VENDAS VALUES (
+        p_id_venda, p_cod_cliente, p_cod_vendedor, p_cod_status, p_cod_pagamento,
+        p_cod_produto, p_qtd_produto_vendido, p_val_total_pedido, p_val_desconto
+    );
+
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Erro ao inserir venda: ' || SQLERRM);
+        RAISE;
+END;
+/
+
 
 
 
