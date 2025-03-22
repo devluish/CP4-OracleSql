@@ -549,13 +549,202 @@ WHERE p.COD_PEDIDO NOT IN (
 
 
 
+--EX4: Empacotamento das Procedures e Objetos
+
+CREATE OR REPLACE PACKAGE PKG_ETL_VENDAS AS
+    PROCEDURE INSERE_DIM_CLIENTE(
+        p_cod_cliente     IN DIM_CLIENTE.COD_CLIENTE%TYPE,
+        p_nome_cliente    IN DIM_CLIENTE.NOME_CLIENTE%TYPE,
+        p_perfil_consumo  IN DIM_CLIENTE.PERFIL_CONSUMO%TYPE
+    );
+
+    PROCEDURE INSERE_DIM_VENDEDOR(
+        p_cod_vendedor   IN DIM_VENDEDOR.COD_VENDEDOR%TYPE,
+        p_nome_vendedor  IN DIM_VENDEDOR.NOME_VENDEDOR%TYPE
+    );
+
+    PROCEDURE INSERE_DIM_PRODUTO(
+        p_cod_produto   IN DIM_PRODUTO.COD_PRODUTO%TYPE,
+        p_nome_produto  IN DIM_PRODUTO.NOME_PRODUTO%TYPE,
+        p_categoria     IN DIM_PRODUTO.CATEGORIA%TYPE
+    );
+
+    PROCEDURE INSERE_DIM_STATUS(
+        p_cod_status        IN DIM_STATUS.COD_STATUS%TYPE,
+        p_descricao_status  IN DIM_STATUS.DESCRICAO_STATUS%TYPE
+    );
+
+    PROCEDURE INSERE_DIM_PAGAMENTO(
+        p_cod_pagamento     IN DIM_PAGAMENTO.COD_PAGAMENTO%TYPE,
+        p_forma_pagamento   IN DIM_PAGAMENTO.FORMA_PAGAMENTO%TYPE,
+        p_parcelado         IN DIM_PAGAMENTO.PARCELADO%TYPE
+    );
+
+    PROCEDURE INSERE_FATO_VENDAS(
+        p_id_venda             IN FATO_VENDAS.ID_VENDA%TYPE,
+        p_cod_cliente          IN FATO_VENDAS.COD_CLIENTE%TYPE,
+        p_cod_vendedor         IN FATO_VENDAS.COD_VENDEDOR%TYPE,
+        p_cod_status           IN FATO_VENDAS.COD_STATUS%TYPE,
+        p_cod_pagamento        IN FATO_VENDAS.COD_PAGAMENTO%TYPE,
+        p_cod_produto          IN FATO_VENDAS.COD_PRODUTO%TYPE,
+        p_qtd_produto_vendido  IN FATO_VENDAS.QTD_PRODUTO_VENDIDO%TYPE,
+        p_val_total_pedido     IN FATO_VENDAS.VAL_TOTAL_PEDIDO%TYPE,
+        p_val_desconto         IN FATO_VENDAS.VAL_DESCONTO%TYPE
+    );
+
+    PROCEDURE ETL_COMPLETO;
+END PKG_ETL_VENDAS;
+/
 
 
+--CORPO DO PKG BODY
+CREATE OR REPLACE PACKAGE BODY PKG_ETL_VENDAS AS
+
+    PROCEDURE INSERE_DIM_CLIENTE(
+        p_cod_cliente     IN DIM_CLIENTE.COD_CLIENTE%TYPE,
+        p_nome_cliente    IN DIM_CLIENTE.NOME_CLIENTE%TYPE,
+        p_perfil_consumo  IN DIM_CLIENTE.PERFIL_CONSUMO%TYPE
+    ) IS
+        v_count NUMBER;
+    BEGIN
+        IF p_nome_cliente IS NULL THEN
+            RAISE_APPLICATION_ERROR(-20001, 'Nome do cliente não pode ser nulo.');
+        END IF;
+
+        SELECT COUNT(*) INTO v_count FROM DIM_CLIENTE WHERE COD_CLIENTE = p_cod_cliente;
+        IF v_count > 0 THEN
+            RAISE_APPLICATION_ERROR(-20002, 'Cliente já cadastrado.');
+        END IF;
+
+        INSERT INTO DIM_CLIENTE VALUES (p_cod_cliente, p_nome_cliente, p_perfil_consumo);
+    END;
+
+    PROCEDURE INSERE_DIM_VENDEDOR(
+        p_cod_vendedor   IN DIM_VENDEDOR.COD_VENDEDOR%TYPE,
+        p_nome_vendedor  IN DIM_VENDEDOR.NOME_VENDEDOR%TYPE
+    ) IS
+        v_count NUMBER;
+    BEGIN
+        IF p_nome_vendedor IS NULL THEN
+            RAISE_APPLICATION_ERROR(-20003, 'Nome do vendedor não pode ser nulo.');
+        END IF;
+
+        SELECT COUNT(*) INTO v_count FROM DIM_VENDEDOR WHERE COD_VENDEDOR = p_cod_vendedor;
+        IF v_count > 0 THEN
+            RAISE_APPLICATION_ERROR(-20004, 'Vendedor já cadastrado.');
+        END IF;
+
+        INSERT INTO DIM_VENDEDOR VALUES (p_cod_vendedor, p_nome_vendedor);
+    END;
+
+    PROCEDURE INSERE_DIM_PRODUTO(
+        p_cod_produto   IN DIM_PRODUTO.COD_PRODUTO%TYPE,
+        p_nome_produto  IN DIM_PRODUTO.NOME_PRODUTO%TYPE,
+        p_categoria     IN DIM_PRODUTO.CATEGORIA%TYPE
+    ) IS
+        v_count NUMBER;
+    BEGIN
+        IF p_nome_produto IS NULL OR p_categoria IS NULL THEN
+            RAISE_APPLICATION_ERROR(-20005, 'Nome e categoria do produto são obrigatórios.');
+        END IF;
+
+        SELECT COUNT(*) INTO v_count FROM DIM_PRODUTO WHERE COD_PRODUTO = p_cod_produto;
+        IF v_count > 0 THEN
+            RAISE_APPLICATION_ERROR(-20006, 'Produto já cadastrado.');
+        END IF;
+
+        INSERT INTO DIM_PRODUTO VALUES (p_cod_produto, p_nome_produto, p_categoria);
+    END;
+
+    PROCEDURE INSERE_DIM_STATUS(
+        p_cod_status        IN DIM_STATUS.COD_STATUS%TYPE,
+        p_descricao_status  IN DIM_STATUS.DESCRICAO_STATUS%TYPE
+    ) IS
+        v_count NUMBER;
+    BEGIN
+        IF p_descricao_status IS NULL THEN
+            RAISE_APPLICATION_ERROR(-20007, 'Descrição do status é obrigatória.');
+        END IF;
+
+        SELECT COUNT(*) INTO v_count FROM DIM_STATUS WHERE COD_STATUS = p_cod_status;
+        IF v_count > 0 THEN
+            RAISE_APPLICATION_ERROR(-20008, 'Status já cadastrado.');
+        END IF;
+
+        INSERT INTO DIM_STATUS VALUES (p_cod_status, p_descricao_status);
+    END;
+
+    PROCEDURE INSERE_DIM_PAGAMENTO(
+        p_cod_pagamento     IN DIM_PAGAMENTO.COD_PAGAMENTO%TYPE,
+        p_forma_pagamento   IN DIM_PAGAMENTO.FORMA_PAGAMENTO%TYPE,
+        p_parcelado         IN DIM_PAGAMENTO.PARCELADO%TYPE
+    ) IS
+        v_count NUMBER;
+    BEGIN
+        IF p_forma_pagamento IS NULL THEN
+            RAISE_APPLICATION_ERROR(-20009, 'Forma de pagamento é obrigatória.');
+        END IF;
+
+        IF p_parcelado NOT IN ('Sim', 'Não') THEN
+            RAISE_APPLICATION_ERROR(-20010, 'Valor de "parcelado" deve ser Sim ou Não.');
+        END IF;
+
+        SELECT COUNT(*) INTO v_count FROM DIM_PAGAMENTO WHERE COD_PAGAMENTO = p_cod_pagamento;
+        IF v_count > 0 THEN
+            RAISE_APPLICATION_ERROR(-20011, 'Forma de pagamento já cadastrada.');
+        END IF;
+
+        INSERT INTO DIM_PAGAMENTO VALUES (p_cod_pagamento, p_forma_pagamento, p_parcelado);
+    END;
+
+    PROCEDURE INSERE_FATO_VENDAS(
+        p_id_venda             IN FATO_VENDAS.ID_VENDA%TYPE,
+        p_cod_cliente          IN FATO_VENDAS.COD_CLIENTE%TYPE,
+        p_cod_vendedor         IN FATO_VENDAS.COD_VENDEDOR%TYPE,
+        p_cod_status           IN FATO_VENDAS.COD_STATUS%TYPE,
+        p_cod_pagamento        IN FATO_VENDAS.COD_PAGAMENTO%TYPE,
+        p_cod_produto          IN FATO_VENDAS.COD_PRODUTO%TYPE,
+        p_qtd_produto_vendido  IN FATO_VENDAS.QTD_PRODUTO_VENDIDO%TYPE,
+        p_val_total_pedido     IN FATO_VENDAS.VAL_TOTAL_PEDIDO%TYPE,
+        p_val_desconto         IN FATO_VENDAS.VAL_DESCONTO%TYPE
+    ) IS
+        v_count NUMBER;
+    BEGIN
+        IF p_qtd_produto_vendido <= 0 THEN
+            RAISE_APPLICATION_ERROR(-20012, 'Quantidade vendida deve ser maior que zero.');
+        END IF;
+
+        SELECT COUNT(*) INTO v_count FROM FATO_VENDAS WHERE ID_VENDA = p_id_venda;
+        IF v_count > 0 THEN
+            RAISE_APPLICATION_ERROR(-20013, 'Venda já cadastrada.');
+        END IF;
+
+        INSERT INTO FATO_VENDAS VALUES (
+            p_id_venda, p_cod_cliente, p_cod_vendedor, p_cod_status, p_cod_pagamento,
+            p_cod_produto, p_qtd_produto_vendido, p_val_total_pedido, p_val_desconto
+        );
+    END;
+
+    -- PROCEDURE OPCIONAL PARA EXECUTAR O ETL COMPLETO
+    PROCEDURE ETL_COMPLETO IS
+    BEGIN
+        -- Aqui você pode incluir os comandos de carga automática por SELECT INTO, caso deseje
+        DBMS_OUTPUT.PUT_LINE('Executar carga completa com INSERTs automáticos aqui se desejado.');
+    END;
+
+END PKG_ETL_VENDAS;
+/
 
 
+--VISUALIZAÇÃO
+SELECT OBJECT_NAME, STATUS FROM USER_OBJECTS
+WHERE OBJECT_TYPE = 'PACKAGE' AND OBJECT_NAME = 'PKG_ETL_VENDAS';
 
-
-
+--TESTANDO UMA PROCEDURE
+BEGIN
+    PKG_ETL_VENDAS.INSERE_DIM_CLIENTE(101, 'Maria Teste', 'Frequente');
+END;
+/
 
 
 
