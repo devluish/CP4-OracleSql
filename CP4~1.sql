@@ -748,20 +748,169 @@ END;
 
 
 
+--EX5: Execução das procedures
+
+
+--BLOCO BEGIN - FATOS VENDA
+BEGIN
+    -- Venda 1
+    PKG_ETL_VENDAS.INSERE_FATO_VENDAS(
+        p_id_venda             => 5001,
+        p_cod_cliente          => 2,     -- João Lima
+        p_cod_vendedor         => 11,    -- Fernanda Dias
+        p_cod_status           => 2,     -- Concluído
+        p_cod_pagamento        => 1,     -- Cartão de Crédito
+        p_cod_produto          => 1002,  -- Creme Dental MaxFresh
+        p_qtd_produto_vendido  => 3,
+        p_val_total_pedido     => 59.90,
+        p_val_desconto         => 5.00
+    );
+
+    -- Venda 2
+    PKG_ETL_VENDAS.INSERE_FATO_VENDAS(
+        p_id_venda             => 5002,
+        p_cod_cliente          => 5,     -- Fernanda Dias
+        p_cod_vendedor         => 12,    -- Rafael Oliveira
+        p_cod_status           => 3,     -- Pendente
+        p_cod_pagamento        => 3,     -- PIX
+        p_cod_produto          => 1006,  -- Protetor Bucal Esportivo
+        p_qtd_produto_vendido  => 1,
+        p_val_total_pedido     => 79.90,
+        p_val_desconto         => 0.00
+    );
+
+    -- Venda 3
+    PKG_ETL_VENDAS.INSERE_FATO_VENDAS(
+        p_id_venda             => 5003,
+        p_cod_cliente          => 10,    -- Ricardo Almeida
+        p_cod_vendedor         => 14,    -- Paulo Henrique
+        p_cod_status           => 1,     -- Processando
+        p_cod_pagamento        => 9,     -- Parcelamento Loja
+        p_cod_produto          => 1010,  -- Kit Tratamento Gengiva
+        p_qtd_produto_vendido  => 2,
+        p_val_total_pedido     => 120.00,
+        p_val_desconto         => 15.00
+    );
+END;
+/
+
+SELECT * FROM DIM_CLIENTE ORDER BY COD_CLIENTE;
+SELECT * FROM DIM_VENDEDOR ORDER BY COD_VENDEDOR;
+SELECT * FROM DIM_PRODUTO ORDER BY COD_PRODUTO;
+SELECT * FROM DIM_STATUS ORDER BY COD_STATUS;
+SELECT * FROM DIM_PAGAMENTO ORDER BY COD_PAGAMENTO;
+
+
+SELECT * FROM FATO_VENDAS ORDER BY ID_VENDA;
 
 
 
 
 
+-- Implementação das Trigger
+
+--TABELA DE AUDITORIA
+CREATE TABLE AUDITORIA_DIMENSOES (
+    ID_AUDITORIA     NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    TABELA_AFETADA   VARCHAR2(30),
+    ID_REGISTRO      NUMBER,
+    USUARIO_BANCO    VARCHAR2(30),
+    DATA_INSERCAO    DATE
+);
 
 
+--TRIGGER DE AUDITORIA
+CREATE OR REPLACE TRIGGER TRG_AUDIT_DIM_CLIENTE
+AFTER INSERT ON DIM_CLIENTE
+FOR EACH ROW
+BEGIN
+    INSERT INTO AUDITORIA_DIMENSOES (
+        TABELA_AFETADA,
+        ID_REGISTRO,
+        USUARIO_BANCO,
+        DATA_INSERCAO
+    ) VALUES (
+        'DIM_CLIENTE',
+        :NEW.COD_CLIENTE,
+        USER,
+        SYSDATE
+    );
+END;
+/
 
 
+--Triggers de auditoria por tabela
+--DIM_CLIENTE
+CREATE OR REPLACE TRIGGER TRG_AUDIT_DIM_CLIENTE
+AFTER INSERT ON DIM_CLIENTE
+FOR EACH ROW
+BEGIN
+    INSERT INTO AUDITORIA_DIMENSOES (
+        TABELA_AFETADA, ID_REGISTRO, USUARIO_BANCO, DATA_INSERCAO
+    ) VALUES (
+        'DIM_CLIENTE', :NEW.COD_CLIENTE, USER, SYSDATE
+    );
+END;
+/
+
+--DIM_VENDEDOR
+CREATE OR REPLACE TRIGGER TRG_AUDIT_DIM_VENDEDOR
+AFTER INSERT ON DIM_VENDEDOR
+FOR EACH ROW
+BEGIN
+    INSERT INTO AUDITORIA_DIMENSOES (
+        TABELA_AFETADA, ID_REGISTRO, USUARIO_BANCO, DATA_INSERCAO
+    ) VALUES (
+        'DIM_VENDEDOR', :NEW.COD_VENDEDOR, USER, SYSDATE
+    );
+END;
+/
 
 
+--PRODUTO
+CREATE OR REPLACE TRIGGER TRG_AUDIT_DIM_PRODUTO
+AFTER INSERT ON DIM_PRODUTO
+FOR EACH ROW
+BEGIN
+    INSERT INTO AUDITORIA_DIMENSOES (
+        TABELA_AFETADA, ID_REGISTRO, USUARIO_BANCO, DATA_INSERCAO
+    ) VALUES (
+        'DIM_PRODUTO', :NEW.COD_PRODUTO, USER, SYSDATE
+    );
+END;
+/
 
+--STATUS
+CREATE OR REPLACE TRIGGER TRG_AUDIT_DIM_STATUS
+AFTER INSERT ON DIM_STATUS
+FOR EACH ROW
+BEGIN
+    INSERT INTO AUDITORIA_DIMENSOES (
+        TABELA_AFETADA, ID_REGISTRO, USUARIO_BANCO, DATA_INSERCAO
+    ) VALUES (
+        'DIM_STATUS', :NEW.COD_STATUS, USER, SYSDATE
+    );
+END;
+/
 
+--DIM_PAGAMENTO
+CREATE OR REPLACE TRIGGER TRG_AUDIT_DIM_PAGAMENTO
+AFTER INSERT ON DIM_PAGAMENTO
+FOR EACH ROW
+BEGIN
+    INSERT INTO AUDITORIA_DIMENSOES (
+        TABELA_AFETADA, ID_REGISTRO, USUARIO_BANCO, DATA_INSERCAO
+    ) VALUES (
+        'DIM_PAGAMENTO', :NEW.COD_PAGAMENTO, USER, SYSDATE
+    );
+END;
+/
 
+--TESTES
+BEGIN
+    PKG_ETL_VENDAS.INSERE_DIM_CLIENTE(999, 'Auditoria Teste', 'VIP');
+END;
+/
 
 
 
