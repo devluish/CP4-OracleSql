@@ -1218,3 +1218,4 @@ BEGIN
     PKG_ETL_VENDAS.INSERE_DIM_CLIENTE(999, 'Auditoria Teste', 'VIP', 'SP');
 END;
 
+
